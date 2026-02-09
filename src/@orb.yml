@@ -1,14 +1,29 @@
 version: 2.1
 
 description: >
-  A fork of circleci/trigger-pipeline with proper error handling. This orb
-  triggers downstream CircleCI pipelines and fails visibly when the API returns
-  errors, preventing silent deployment failures.
+  A fork of circleci/trigger-pipeline with proper error handling.
+  The upstream orb silently succeeds even when the CircleCI API returns errors,
+  which can cause deployment failures to go unnoticed. This fork fixes that.
+
+
+  This is a drop-in replacement — same parameters, same command name. Just change
+  the orb reference from circleci/trigger-pipeline to munibillingllc/trigger-pipeline-orb.
+
+
+  How this fork differs from circleci/trigger-pipeline:
+
+  - API error responses (e.g. "Pipeline not found.") — upstream exits 0 (green check), this fork exits 1 (red failure)
+
+  - Non-2xx HTTP status codes — upstream ignores them, this fork exits 1 with error message
+
+  - Missing pipeline ID in response — upstream ignores it, this fork exits 1 with error message
+
+  - definition_id format — upstream only checks non-empty, this fork validates UUID format before the API call
+
+  - Shell error handling — upstream has no set -e, this fork uses set -euo pipefail
+
+  - Tag path --argjson bug — upstream has broken variable reference, this fork fixes it
 
 display:
   home_url: "https://www.munibilling.com"
   source_url: "https://github.com/MuniBillingLLC/trigger-pipeline-orb"
-
-# If your orb requires other orbs, you can import them like this. Otherwise remove the "orbs" stanza.
-# orbs:
-#  hello: circleci/hello-build@0.0.5
