@@ -1,0 +1,39 @@
+description: >
+  Triggers a CircleCI pipeline with proper error handling. Unlike the upstream
+  circleci/trigger-pipeline orb, this command validates the API response and
+  fails visibly if the pipeline trigger fails.
+
+parameters:
+  project_slug:
+    type: string
+    description: The project slug. It can be found on project settings
+  branch:
+    type: string
+    default: ""
+    description: Branch where the pipeline will be run from. Not compatible with tag.
+  tag:
+    type: string
+    default: ""
+    description: Tag where the pipeline will be run from. Not compatible with branch.
+  definition_id:
+    type: string
+    description: Definition id of the pipeline to run. Can be found on project settings
+  token:
+    type: string
+    description: Name of the environment variable for the PAT token to use for authentication.
+  parameters:
+    type: string
+    description: List of comma separated key=value parameters.
+    default: ""
+
+steps:
+  - run:
+      environment:
+        PARAM_PROJECT_SLUG: <<parameters.project_slug>>
+        PARAM_BRANCH: <<parameters.branch>>
+        PARAM_TAG: <<parameters.tag>>
+        PARAM_DEFINITION_ID: <<parameters.definition_id>>
+        PARAM_TOKEN: <<parameters.token>>
+        PARAM_PARAMETERS: <<parameters.parameters>>
+      name: Trigger pipeline
+      command: <<include(scripts/trigger.sh)>>

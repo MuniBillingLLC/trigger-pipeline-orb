@@ -1,0 +1,26 @@
+description: >
+  Trigger an infra-k8s pipeline for Kubernetes deployment.
+  This example shows how to trigger a downstream pipeline with proper error handling.
+
+usage:
+  version: 2.1
+  orbs:
+    trigger-pipeline: munibillingllc/trigger-pipeline-orb-private@0.0.1
+
+  jobs:
+    trigger-infra-k8s:
+      docker:
+        - image: cimg/base:stable
+      steps:
+        - trigger-pipeline/trigger:
+            branch: main
+            definition_id: $INFRA_K8S_DEFINITION_ID
+            parameters: trigger-repo=my-service,trigger-branch=$CIRCLE_BRANCH,trigger-sha1=$CIRCLE_SHA1
+            project_slug: github/MyOrg/infra-k8s
+            token: $CCI_TOKEN
+
+  workflows:
+    deploy:
+      jobs:
+        - trigger-infra-k8s:
+            context: org-global

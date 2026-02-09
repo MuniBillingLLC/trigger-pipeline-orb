@@ -1,0 +1,89 @@
+version: 2.1
+orbs:
+  # Your orb will be automatically injected here during the pipeline.
+  # Reference your orb's jobs and commands below as they will exist when built.
+  orb-tools: circleci/orb-tools@12.3
+  # The orb definition is intentionally not included here. It will be injected into the pipeline.
+  trigger-pipeline-orb: {}
+
+# Use this tag to ensure test jobs always run,
+# even though the downstream publish job will only run on release tags.
+filters: &filters
+  tags:
+    only: /.*/
+
+# Filter for release tags.
+release-filters: &release-filters
+  branches:
+    ignore: /.*/
+  tags:
+    only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+
+jobs:
+  # Test that the trigger script has valid syntax and required validation logic
+  script-validation:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - run:
+          name: Validate trigger.sh syntax
+          command: bash -n src/scripts/trigger.sh
+      - run:
+          name: Test UUID validation logic
+          command: |
+            # Test the UUID regex directly - this is the core validation logic
+            UUID_REGEX='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+            # Test 1: Placeholder should be rejected
+            if echo "abcd1234" | grep -qiE "$UUID_REGEX"; then
+              echo "FAIL: Regex incorrectly accepts placeholder 'abcd1234'"
+              exit 1
+            else
+              echo "PASS: Regex correctly rejects placeholder 'abcd1234'"
+            fi
+
+            # Test 2: Valid UUID should be accepted
+            if echo "12345678-1234-1234-1234-123456789abc" | grep -qiE "$UUID_REGEX"; then
+              echo "PASS: Regex correctly accepts valid UUID"
+            else
+              echo "FAIL: Regex incorrectly rejects valid UUID"
+              exit 1
+            fi
+
+            # Test 3: Another placeholder pattern
+            if echo "Abcd1234" | grep -qiE "$UUID_REGEX"; then
+              echo "FAIL: Regex incorrectly accepts 'Abcd1234'"
+              exit 1
+            else
+              echo "PASS: Regex correctly rejects 'Abcd1234'"
+            fi
+
+            # Test 4: Verify the regex in the script matches what we tested
+            SCRIPT_REGEX=$(grep "UUID_REGEX=" src/scripts/trigger.sh | cut -d"'" -f2)
+            if [ "$SCRIPT_REGEX" = "$UUID_REGEX" ]; then
+              echo "PASS: Script uses correct UUID regex"
+            else
+              echo "FAIL: Script regex doesn't match expected"
+              echo "  Expected: $UUID_REGEX"
+              echo "  Got: $SCRIPT_REGEX"
+              exit 1
+            fi
+workflows:
+  test-deploy:
+    jobs:
+      # Make sure to include "filters: *filters" in every test job you want to run as part of your deployment.
+      - script-validation:
+          filters: *filters
+      # The orb must be re-packed for publishing, and saved to the workspace.
+      - orb-tools/pack:
+          filters: *release-filters
+      - orb-tools/publish:
+          orb_name: munibillingllc/trigger-pipeline-orb
+          vcs_type: << pipeline.project.type >>
+          pub_type: production
+          requires:
+            - orb-tools/pack
+            - script-validation
+          context: orb-publishing
+          filters: *release-filters
