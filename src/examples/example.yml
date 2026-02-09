@@ -5,7 +5,7 @@ description: >
 usage:
   version: 2.1
   orbs:
-    trigger-pipeline: munibillingllc/trigger-pipeline-orb-private@0.0.1
+    trigger-pipeline: munibillingllc/trigger-pipeline-orb@0.0.3
 
   jobs:
     trigger-infra-k8s:
